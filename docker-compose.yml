@@ -5,11 +5,17 @@ services:
     image: sprysio/frontend_build:latest
     restart: always
     ports:
-      - "3000:3000"
+      - "3000:80"
     depends_on:
       - spring_boot
     networks:
-      - front_network
+      - react-spring
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
   spring_boot:
     image: sprysio/backend_build:latest
     restart: always
@@ -19,8 +25,13 @@ services:
       postgres:
         condition: service_healthy
     networks:
-      - back_network
-      - front_network
+      - spring-postgres
+      - react-spring
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8888/api/message"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   postgres:
     build: ./postgres
@@ -36,7 +47,9 @@ services:
     secrets:
       - db_password
     networks:
-      - back_network
+      - spring-postgres
+      - postgres-pgadmin
+
   pgadmin:
     build: ./pgadmin
     restart: unless-stopped
@@ -48,12 +61,13 @@ services:
       PGADMIN_DEFAULT_EMAIL: admin@example.com
       PGADMIN_DEFAULT_PASSWORD: admin
     networks:
-      - back_network
+      - postgres-pgadmin
 volumes:
   pg_data:
 networks:
-  front_network:
-  back_network:
+  react-spring:
+  spring-postgres:
+  postgres-pgadmin:
 secrets:
   db_password:
     file: ./postgres/password.txt
