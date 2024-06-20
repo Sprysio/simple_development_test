@@ -1,0 +1,59 @@
+version: "3.8"
+
+services:
+  react:
+    image: sprysio/frontend_build:latest
+    restart: always
+    ports:
+      - "3000:3000"
+    depends_on:
+      - spring_boot
+    networks:
+      - front_network
+  spring_boot:
+    image: sprysio/backend_build:latest
+    restart: always
+    ports:
+      - "8888:8888"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - back_network
+      - front_network
+
+  postgres:
+    build: ./postgres
+    restart: always
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: testdb
+      POSTGRES_PASSWORD_FILE: /run/secrets/db_password
+      POSTGRES_USER: postgres
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    secrets:
+      - db_password
+    networks:
+      - back_network
+  pgadmin:
+    build: ./pgadmin
+    restart: unless-stopped
+    depends_on:
+      - postgres
+    ports:
+      - "5050:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@example.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    networks:
+      - back_network
+volumes:
+  pg_data:
+networks:
+  front_network:
+  back_network:
+secrets:
+  db_password:
+    file: ./postgres/password.txt
